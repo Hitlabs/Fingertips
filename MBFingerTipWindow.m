@@ -363,6 +363,18 @@
             if ([[touch gestureRecognizers] count] == 0)
                 return YES;
         }
+        
+        // An additional case is on iOS 13+ when dismissing a card-based modal view
+        // controller and then attempting to scroll before the full transition is over.
+        // In that case there is no end event.
+        //
+        // It seems that in previous versions of iOS touch events were completely supressed
+        // during that dismiss transition so this problem wasn't evident.
+        if ([NSStringFromClass([view class]) isEqualToString:@"UITransitionView"])
+        {
+            if ([[touch gestureRecognizers] count] == 0)
+                return YES;
+        }
 
         view = view.superview;
     }
