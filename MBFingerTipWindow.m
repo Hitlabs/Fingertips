@@ -22,14 +22,9 @@
 
 #pragma mark -
 
-@interface MBFingerTipOverlayWindow : UIWindow
-@end
-
-#pragma mark -
-
 @interface MBFingerTipWindow ()
 
-@property (nonatomic, strong) UIWindow *overlayWindow;
+@property (nonatomic, strong) UIView *overlayView;
 @property (nonatomic, assign) BOOL active;
 @property (nonatomic, assign) BOOL fingerTipRemovalScheduled;
 
@@ -105,19 +100,21 @@
 
 #pragma mark -
 
-- (UIWindow *)overlayWindow
+- (UIView *)overlayView
 {
-    if ( ! _overlayWindow)
+    if ( ! _overlayView)
     {
-        _overlayWindow = [[MBFingerTipOverlayWindow alloc] initWithFrame:self.frame];
+        _overlayView = [[UIView alloc] initWithFrame:self.frame];
         
-        _overlayWindow.userInteractionEnabled = NO;
-        _overlayWindow.windowLevel = UIWindowLevelStatusBar;
-        _overlayWindow.backgroundColor = [UIColor clearColor];
-        _overlayWindow.hidden = NO;
+        _overlayView.userInteractionEnabled = NO;
+        _overlayView.backgroundColor = [UIColor clearColor];
+        _overlayView.hidden = NO;
+        _overlayView.layer.zPosition = MAXFLOAT;
+        
+        [self addSubview:_overlayView];
     }
     
-    return _overlayWindow;
+    return _overlayView;
 }
 
 - (UIImage *)touchImage
@@ -220,7 +217,7 @@
                 case UITouchPhaseMoved:
                 case UITouchPhaseStationary:
                 {
-                    MBFingerTipView *touchView = (MBFingerTipView *)[self.overlayWindow viewWithTag:touch.hash];
+                    MBFingerTipView *touchView = (MBFingerTipView *)[self.overlayView viewWithTag:touch.hash];
 
                     if (touch.phase != UITouchPhaseStationary && touchView != nil && [touchView isFadingOut])
                     {
@@ -231,13 +228,13 @@
                     if (touchView == nil && touch.phase != UITouchPhaseStationary)
                     {
                         touchView = [[MBFingerTipView alloc] initWithImage:self.touchImage];
-                        [self.overlayWindow addSubview:touchView];
+                        [self.overlayView addSubview:touchView];
                     }
             
                     if ( ! [touchView isFadingOut])
                     {
                         touchView.alpha = self.touchAlpha;
-                        touchView.center = [touch locationInView:self.overlayWindow];
+                        touchView.center = [touch locationInView:self.overlayView];
                         touchView.tag = touch.hash;
                         touchView.timestamp = touch.timestamp;
                         touchView.shouldAutomaticallyRemoveAfterTimeout = [self shouldAutomaticallyRemoveFingerTipForTouch:touch];
@@ -285,7 +282,7 @@
     NSTimeInterval now = [[NSProcessInfo processInfo] systemUptime];
     const CGFloat REMOVAL_DELAY = 0.2;
 
-    for (MBFingerTipView *touchView in [self.overlayWindow subviews])
+    for (MBFingerTipView *touchView in [self.overlayView subviews])
     {
         if ( ! [touchView isKindOfClass:[MBFingerTipView class]])
             continue;
@@ -294,13 +291,13 @@
             [self removeFingerTipWithHash:touchView.tag animated:YES];
     }
 
-    if ([[self.overlayWindow subviews] count] > 0)
+    if ([[self.overlayView subviews] count] > 0)
         [self scheduleFingerTipRemoval];
 }
 
 - (void)removeFingerTipWithHash:(NSUInteger)hash animated:(BOOL)animated;
 {
-    MBFingerTipView *touchView = (MBFingerTipView *)[self.overlayWindow viewWithTag:hash];
+    MBFingerTipView *touchView = (MBFingerTipView *)[self.overlayView viewWithTag:hash];
     if ( ! [touchView isKindOfClass:[MBFingerTipView class]])
         return;
     
@@ -378,24 +375,5 @@
 #pragma mark -
 
 @implementation MBFingerTipView
-
-@end
-
-#pragma mark -
-
-@implementation MBFingerTipOverlayWindow
-
-// UIKit tries to get the rootViewController from the overlay window. Use the Fingertips window instead. This fixes
-// issues with status bar behavior, as otherwise the overlay window would control the status bar.
-
-- (UIViewController *)rootViewController
-{
-    NSPredicate *predicate = [NSPredicate predicateWithBlock:^BOOL(id evaluatedObject, NSDictionary *bindings)
-    {
-        return [evaluatedObject isKindOfClass:[MBFingerTipWindow class]];
-    }];
-    UIWindow *mainWindow = [[[[UIApplication sharedApplication] windows] filteredArrayUsingPredicate:predicate] firstObject];
-    return mainWindow.rootViewController ?: [super rootViewController];
-}
 
 @end
