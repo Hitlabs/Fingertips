@@ -69,6 +69,17 @@
     return self;
 }
 
+-(instancetype)initWithWindowScene:(UIWindowScene *)windowScene
+{
+    self = [super initWithWindowScene:windowScene];
+    
+    if (self != nil)
+        [self MBFingerTipWindow_commonInit];
+    
+    return self;
+}
+
+
 - (void)MBFingerTipWindow_commonInit
 {
     self.strokeColor = [UIColor blackColor];
